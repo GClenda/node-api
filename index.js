@@ -96,9 +96,16 @@ const repositories =
 app.get('/repository/:id/object/:object_id', async (req, res) => {
     try {
         const { id, object_id } = req.params;
+        
         let repository = repositories?.find(repo => repo.id === Number(id));
-        let requestedObj = repository?.objects.filter((obj) => obj.object_id === Number(object_id));
-        if(requestedObj?.length) {
+        
+        if(!repository) {
+            res.status(404).send({message: "Repository not found"})
+        }
+
+        let requestedObj = repository.objects.filter((obj) => obj.object_id === Number(object_id));
+        
+        if(requestedObj.length) {
             res.status(200).send(requestedObj);
         } else {    
             res.status(404).send({ message: "Object not found" })
