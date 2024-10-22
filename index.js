@@ -1,5 +1,6 @@
 const express = require("express");
 const app = express();
+const crypto = require('crypto')
 
 const port = 3000;
 
@@ -96,7 +97,7 @@ const repositories =
 app.get('/repository/:id/object/:object_id', async (req, res) => {
     try {
         const { id, object_id } = req.params;
-        
+
         let repository = repositories?.find(repo => repo.id === Number(id));
         
         if(!repository) {
@@ -115,6 +116,53 @@ app.get('/repository/:id/object/:object_id', async (req, res) => {
         res.status(500).send({ message: "An error occured while retrieving the obj" })
     }
 });
+
+app.put('/repository/object/:object_id', async (req, res) => {
+    try {
+        const {object_id} = req.params;
+        const objectData = req.body;
+
+        if(!objectData){
+            return res.status(404).send({message: "Repository object is requires"});
+        }
+
+        if(!objectData.name) {
+            return res.status(400).send({message: "Repository name is required to create a repo"});
+        }
+
+        const repositoryId = crypto.createHash('sha256').update(JSON.stringify(objectData)).digest('hex');
+        let repository = repositories?.find(repo => repo.id === repositoryId)
+        if(!repository) {
+            repository = {
+                id: repositoryId,
+                ...objectData,
+                objects: []
+            }
+            repositories.push(repository);
+        }
+        let existingObjectIndex = repository?.objects?.findIndex(obj => obj.object_id === object_id);
+        if(existingObjectIndex !== -1) {
+            // update the existing object
+            repository.objects[existingObjectIndex] = {
+                object_id: Number(object_id),
+                ...objectData.objects
+            }
+            return send.status(200).send({message: "Object updated successfully"})
+            // create a new entry 
+        } else {
+            repository.objects.push({
+                object_id: Number(object_id),
+                ...objectData.objects
+            });
+            return res.status(201).send({message: "Object created successfully"})
+        }
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).send({message: "An error occour while saving the object"})
+        
+    }
+})
 
 // start the server
 app.listen(port, () => {
